@@ -150,6 +150,11 @@ namespace Nop.Core.Domain.Customers
         /// </summary>
         public int DeleteGuestTaskOlderThanMinutes { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether to export customer with his custom attributes
+        /// </summary>
+        public bool ExportCustomCustomerAttributes { get; set; }
+
         #region Form fields
 
         /// <summary>

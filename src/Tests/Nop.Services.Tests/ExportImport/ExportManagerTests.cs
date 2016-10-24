@@ -11,7 +11,9 @@ using Nop.Core.Domain.Payments;
 using Nop.Core.Domain.Shipping;
 using Nop.Core.Domain.Tax;
 using Nop.Services.Catalog;
+using Nop.Services.Common;
 using Nop.Services.Configuration;
+using Nop.Services.Customers;
 using Nop.Services.Directory;
 using Nop.Services.ExportImport;
 using Nop.Services.Media;
@@ -44,6 +46,11 @@ namespace Nop.Services.Tests.ExportImport
         private IMeasureService _measureService;
         private CatalogSettings _catalogSettings;
 
+        private ICustomerAttributeService _customerAttributeService;
+        private ICustomerAttributeParser _customerAttributeParser;
+        private IGenericAttributeService _genericAttributeService;
+        private CustomerSettings _customerSettings;
+
         [SetUp]
         public new void SetUp()
         {
@@ -62,12 +69,18 @@ namespace Nop.Services.Tests.ExportImport
             _measureService = MockRepository.GenerateMock<IMeasureService>();
             _catalogSettings=new CatalogSettings();
 
+            _customerAttributeService = MockRepository.GenerateMock<ICustomerAttributeService>();
+            _customerAttributeParser = MockRepository.GenerateMock<ICustomerAttributeParser>();
+            _genericAttributeService = MockRepository.GenerateMock<IGenericAttributeService>();
+            _customerSettings = new CustomerSettings();
+
             _exportManager = new ExportManager(_categoryService,
                 _manufacturerService, _productAttributeService, 
                 _pictureService, _newsLetterSubscriptionService,
                 _storeService, _workContext, _productEditorSettings, 
                 _vendorService, _productTemplateService, _shippingService,
-                _taxCategoryService, _measureService, _catalogSettings);
+                _taxCategoryService, _measureService, _catalogSettings,
+                _customerAttributeService, _customerAttributeParser, _genericAttributeService, _customerSettings);
         }
 
         //[Test]

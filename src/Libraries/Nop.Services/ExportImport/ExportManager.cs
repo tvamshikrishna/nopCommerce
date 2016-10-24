@@ -16,6 +16,7 @@ using Nop.Core.Domain.Tax;
 using Nop.Core.Domain.Vendors;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
+using Nop.Services.Customers;
 using Nop.Services.Directory;
 using Nop.Services.ExportImport.Help;
 using Nop.Services.Media;
@@ -51,6 +52,10 @@ namespace Nop.Services.ExportImport
         private readonly ITaxCategoryService _taxCategoryService;
         private readonly IMeasureService _measureService;
         private readonly CatalogSettings _catalogSettings;
+        private readonly ICustomerAttributeService _customerAttributeService;
+        private readonly ICustomerAttributeParser _customerAttributeParser;
+        private readonly IGenericAttributeService _genericAttributeService;
+        private readonly CustomerSettings _customerSettings;
 
         #endregion
 
@@ -69,7 +74,11 @@ namespace Nop.Services.ExportImport
             IShippingService shippingService,
             ITaxCategoryService taxCategoryService,
             IMeasureService measureService,
-            CatalogSettings catalogSettings)
+            CatalogSettings catalogSettings,
+            ICustomerAttributeService customerAttributeService,
+            ICustomerAttributeParser customerAttributeParser,
+            IGenericAttributeService genericAttributeService,
+            CustomerSettings customerSettings)
         {
             this._categoryService = categoryService;
             this._manufacturerService = manufacturerService;
@@ -85,6 +94,10 @@ namespace Nop.Services.ExportImport
             this._taxCategoryService = taxCategoryService;
             this._measureService = measureService;
             this._catalogSettings = catalogSettings;
+            this._customerAttributeService = customerAttributeService;
+            this._customerAttributeParser = customerAttributeParser;
+            this._genericAttributeService = genericAttributeService;
+            this._customerSettings = customerSettings;
         }
 
         #endregion
@@ -212,6 +225,25 @@ namespace Nop.Services.ExportImport
                 productTagNames += ";";
             }
             return productTagNames;
+        }
+
+        /// <summary>
+        /// Returns the list of custom customer attributes for a customer separated by a ";"
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <returns>List of custom customer attributes</returns>
+        protected virtual string GetCustomCustomerAttributes(Customer customer)
+        {
+            var customCustomerAttributes = string.Empty;
+            var customerAttributes = GetCustomerAttributes(customer);
+
+            foreach (var customerAttribute in customerAttributes)
+            {
+                customCustomerAttributes += string.Format("{0}: {1};", customerAttribute.Name, 
+                    customerAttribute.Values.FirstOrDefault(cav => cav.IsPreSelected)
+                        .Return(cav => cav.Name, customerAttribute.DefaultValue));
+            }
+            return customCustomerAttributes;
         }
 
         /// <summary>
@@ -404,6 +436,95 @@ namespace Nop.Services.ExportImport
                 return stream.ToArray();
             }
         }
+
+        private IList<CustomerAttributeModel> GetCustomerAttributes(Customer customer)
+        {
+            var customerAttributes = _customerAttributeService.GetAllCustomerAttributes();
+            var model = new List<CustomerAttributeModel>();
+            foreach (var attribute in customerAttributes)
+            {
+                var attributeModel = new CustomerAttributeModel
+                {
+                    Id = attribute.Id,
+                    Name = attribute.Name,
+                    IsRequired = attribute.IsRequired,
+                    AttributeControlType = attribute.AttributeControlType,
+                };
+
+                if (attribute.ShouldHaveValues())
+                {
+                    //values
+                    var attributeValues = _customerAttributeService.GetCustomerAttributeValues(attribute.Id);
+                    foreach (var attributeValue in attributeValues)
+                    {
+                        var attributeValueModel = new CustomerAttributeValueModel
+                        {
+                            Id = attributeValue.Id,
+                            Name = attributeValue.Name,
+                            IsPreSelected = attributeValue.IsPreSelected
+                        };
+                        attributeModel.Values.Add(attributeValueModel);
+                    }
+                }
+
+
+                //set already selected attributes
+                if (customer != null)
+                {
+                    var selectedCustomerAttributes = customer.GetAttribute<string>(SystemCustomerAttributeNames.CustomCustomerAttributes, _genericAttributeService);
+                    switch (attribute.AttributeControlType)
+                    {
+                        case AttributeControlType.DropdownList:
+                        case AttributeControlType.RadioList:
+                        case AttributeControlType.Checkboxes:
+                            {
+                                if (!string.IsNullOrEmpty(selectedCustomerAttributes))
+                                {
+                                    //clear default selection
+                                    foreach (var item in attributeModel.Values)
+                                        item.IsPreSelected = false;
+
+                                    //select new values
+                                    var selectedValues = _customerAttributeParser.ParseCustomerAttributeValues(selectedCustomerAttributes);
+                                    foreach (var attributeValue in selectedValues)
+                                        foreach (var item in attributeModel.Values)
+                                            if (attributeValue.Id == item.Id)
+                                                item.IsPreSelected = true;
+                                }
+                            }
+                            break;
+                        case AttributeControlType.ReadonlyCheckboxes:
+                            {
+                                //do nothing
+                                //values are already pre-set
+                            }
+                            break;
+                        case AttributeControlType.TextBox:
+                        case AttributeControlType.MultilineTextbox:
+                            {
+                                if (!string.IsNullOrEmpty(selectedCustomerAttributes))
+                                {
+                                    var enteredText = _customerAttributeParser.ParseValues(selectedCustomerAttributes, attribute.Id);
+                                    if (enteredText.Any())
+                                        attributeModel.DefaultValue = enteredText[0];
+                                }
+                            }
+                            break;
+                        case AttributeControlType.Datepicker:
+                        case AttributeControlType.ColorSquares:
+                        case AttributeControlType.ImageSquares:
+                        case AttributeControlType.FileUpload:
+                        default:
+                            //not supported attribute control types
+                            break;
+                    }
+                }
+
+                model.Add(attributeModel);
+            }
+            return model;
+        }
+
         #endregion
 
         #region Methods
@@ -1229,12 +1350,11 @@ namespace Nop.Services.ExportImport
         /// <summary>
         /// Export customer list to XLSX
         /// </summary>
-        /// <param name="stream">Stream</param>
         /// <param name="customers">Customers</param>
         public virtual byte[] ExportCustomersToXlsx(IList<Customer> customers)
         {
             //property array
-            var properties = new[]
+            var properties = new List<PropertyByName<Customer>>
             {
                 new PropertyByName<Customer>("CustomerId", p => p.Id),
                 new PropertyByName<Customer>("CustomerGuid", p => p.CustomerGuid),
@@ -1271,8 +1391,13 @@ namespace Nop.Services.ExportImport
                 new PropertyByName<Customer>("ForumPostCount", p => p.GetAttribute<int>(SystemCustomerAttributeNames.ForumPostCount)),
                 new PropertyByName<Customer>("Signature", p => p.GetAttribute<string>(SystemCustomerAttributeNames.Signature)),
             };
+            
+            if (_customerSettings.ExportCustomCustomerAttributes)
+            {
+                properties.Add(new PropertyByName<Customer>("CustomCustomerAttributes", GetCustomCustomerAttributes));
+            }
 
-            return ExportToXlsx(properties, customers);
+            return ExportToXlsx(properties.ToArray(), customers);
         }
 
         /// <summary>
@@ -1292,50 +1417,80 @@ namespace Nop.Services.ExportImport
             foreach (var customer in customers)
             {
                 xmlWriter.WriteStartElement("Customer");
-                xmlWriter.WriteElementString("CustomerId", null, customer.Id.ToString());
-                xmlWriter.WriteElementString("CustomerGuid", null, customer.CustomerGuid.ToString());
-                xmlWriter.WriteElementString("Email", null, customer.Email);
-                xmlWriter.WriteElementString("Username", null, customer.Username);
-                xmlWriter.WriteElementString("Password", null, customer.Password);
-                xmlWriter.WriteElementString("PasswordFormatId", null, customer.PasswordFormatId.ToString());
-                xmlWriter.WriteElementString("PasswordSalt", null, customer.PasswordSalt);
-                xmlWriter.WriteElementString("IsTaxExempt", null, customer.IsTaxExempt.ToString());
-                xmlWriter.WriteElementString("AffiliateId", null, customer.AffiliateId.ToString());
-                xmlWriter.WriteElementString("VendorId", null, customer.VendorId.ToString());
-                xmlWriter.WriteElementString("Active", null, customer.Active.ToString());
+                xmlWriter.WriteString("CustomerId", customer.Id);
+                xmlWriter.WriteString("CustomerGuid", customer.CustomerGuid);
+                xmlWriter.WriteString("Email", customer.Email);
+                xmlWriter.WriteString("Username", customer.Username);
+                xmlWriter.WriteString("Password", customer.Password);
+                xmlWriter.WriteString("PasswordFormatId", customer.PasswordFormatId);
+                xmlWriter.WriteString("PasswordSalt", customer.PasswordSalt);
+                xmlWriter.WriteString("IsTaxExempt", customer.IsTaxExempt);
+                xmlWriter.WriteString("AffiliateId", customer.AffiliateId);
+                xmlWriter.WriteString("VendorId", customer.VendorId);
+                xmlWriter.WriteString("Active", customer.Active);
 
-                xmlWriter.WriteElementString("IsGuest", null, customer.IsGuest().ToString());
-                xmlWriter.WriteElementString("IsRegistered", null, customer.IsRegistered().ToString());
-                xmlWriter.WriteElementString("IsAdministrator", null, customer.IsAdmin().ToString());
-                xmlWriter.WriteElementString("IsForumModerator", null, customer.IsForumModerator().ToString());
+                xmlWriter.WriteString("IsGuest", customer.IsGuest());
+                xmlWriter.WriteString("IsRegistered", customer.IsRegistered());
+                xmlWriter.WriteString("IsAdministrator", customer.IsAdmin());
+                xmlWriter.WriteString("IsForumModerator", customer.IsForumModerator());
 
-                xmlWriter.WriteElementString("FirstName", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.FirstName));
-                xmlWriter.WriteElementString("LastName", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.LastName));
-                xmlWriter.WriteElementString("Gender", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.Gender));
-                xmlWriter.WriteElementString("Company", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.Company));
+                xmlWriter.WriteString("FirstName", customer.GetAttribute<string>(SystemCustomerAttributeNames.FirstName));
+                xmlWriter.WriteString("LastName", customer.GetAttribute<string>(SystemCustomerAttributeNames.LastName));
+                xmlWriter.WriteString("Gender", customer.GetAttribute<string>(SystemCustomerAttributeNames.Gender));
+                xmlWriter.WriteString("Company", customer.GetAttribute<string>(SystemCustomerAttributeNames.Company));
 
-                xmlWriter.WriteElementString("CountryId", null, customer.GetAttribute<int>(SystemCustomerAttributeNames.CountryId).ToString());
-                xmlWriter.WriteElementString("StreetAddress", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.StreetAddress));
-                xmlWriter.WriteElementString("StreetAddress2", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.StreetAddress2));
-                xmlWriter.WriteElementString("ZipPostalCode", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.ZipPostalCode));
-                xmlWriter.WriteElementString("City", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.City));
-                xmlWriter.WriteElementString("StateProvinceId", null, customer.GetAttribute<int>(SystemCustomerAttributeNames.StateProvinceId).ToString());
-                xmlWriter.WriteElementString("Phone", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.Phone));
-                xmlWriter.WriteElementString("Fax", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.Fax));
-                xmlWriter.WriteElementString("VatNumber", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.VatNumber));
-                xmlWriter.WriteElementString("VatNumberStatusId", null, customer.GetAttribute<int>(SystemCustomerAttributeNames.VatNumberStatusId).ToString());
-                xmlWriter.WriteElementString("TimeZoneId", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.TimeZoneId));
+                xmlWriter.WriteString("CountryId", customer.GetAttribute<int>(SystemCustomerAttributeNames.CountryId));
+                xmlWriter.WriteString("StreetAddress", customer.GetAttribute<string>(SystemCustomerAttributeNames.StreetAddress));
+                xmlWriter.WriteString("StreetAddress2", customer.GetAttribute<string>(SystemCustomerAttributeNames.StreetAddress2));
+                xmlWriter.WriteString("ZipPostalCode", customer.GetAttribute<string>(SystemCustomerAttributeNames.ZipPostalCode));
+                xmlWriter.WriteString("City", customer.GetAttribute<string>(SystemCustomerAttributeNames.City));
+                xmlWriter.WriteString("StateProvinceId", customer.GetAttribute<int>(SystemCustomerAttributeNames.StateProvinceId));
+                xmlWriter.WriteString("Phone", customer.GetAttribute<string>(SystemCustomerAttributeNames.Phone));
+                xmlWriter.WriteString("Fax", customer.GetAttribute<string>(SystemCustomerAttributeNames.Fax));
+                xmlWriter.WriteString("VatNumber", customer.GetAttribute<string>(SystemCustomerAttributeNames.VatNumber));
+                xmlWriter.WriteString("VatNumberStatusId", customer.GetAttribute<int>(SystemCustomerAttributeNames.VatNumberStatusId));
+                xmlWriter.WriteString("TimeZoneId", customer.GetAttribute<string>(SystemCustomerAttributeNames.TimeZoneId));
 
                 foreach (var store in _storeService.GetAllStores())
                 {
                     var newsletter = _newsLetterSubscriptionService.GetNewsLetterSubscriptionByEmailAndStoreId(customer.Email, store.Id);
-                    bool subscribedToNewsletters = newsletter != null && newsletter.Active;
-                    xmlWriter.WriteElementString(string.Format("Newsletter-in-store-{0}", store.Id), null, subscribedToNewsletters.ToString());
+                    var subscribedToNewsletters = newsletter != null && newsletter.Active;
+                    xmlWriter.WriteString(string.Format("Newsletter-in-store-{0}", store.Id), subscribedToNewsletters);
                 }
 
-                xmlWriter.WriteElementString("AvatarPictureId", null, customer.GetAttribute<int>(SystemCustomerAttributeNames.AvatarPictureId).ToString());
-                xmlWriter.WriteElementString("ForumPostCount", null, customer.GetAttribute<int>(SystemCustomerAttributeNames.ForumPostCount).ToString());
-                xmlWriter.WriteElementString("Signature", null, customer.GetAttribute<string>(SystemCustomerAttributeNames.Signature));
+                if (_customerSettings.ExportCustomCustomerAttributes)
+                {
+                    var customerAttributes = GetCustomerAttributes(customer);
+
+                    if (customerAttributes.Any())
+                    {
+                        //open CustomCustomerAttributes tag
+                        xmlWriter.WriteStartElement("CustomCustomerAttributes");
+
+                        foreach (var customerAttribute in customerAttributes)
+                        {
+                            //open CustomerAttribute tag
+                            xmlWriter.WriteStartElement("CustomerAttribute");
+
+                            xmlWriter.WriteString("Id", customerAttribute.Id);
+                            xmlWriter.WriteString("Name", customerAttribute.Name);
+
+                            xmlWriter.WriteString("Value",
+                                customerAttribute.Values.FirstOrDefault(cav => cav.IsPreSelected)
+                                    .Return(cav => cav.Name, customerAttribute.DefaultValue));
+
+                            //close CustomerAttribute tag
+                            xmlWriter.WriteEndElement();
+                        }
+
+                        //close CustomCustomerAttributes tag
+                        xmlWriter.WriteEndElement();
+                    }
+                }
+
+                xmlWriter.WriteString("AvatarPictureId",customer.GetAttribute<int>(SystemCustomerAttributeNames.AvatarPictureId));
+                xmlWriter.WriteString("ForumPostCount", customer.GetAttribute<int>(SystemCustomerAttributeNames.ForumPostCount));
+                xmlWriter.WriteString("Signature", customer.GetAttribute<string>(SystemCustomerAttributeNames.Signature));
 
                 xmlWriter.WriteEndElement();
             }
@@ -1396,6 +1551,43 @@ namespace Nop.Services.ExportImport
                 sb.Append(Environment.NewLine); //new line
             }
             return sb.ToString();
+        }
+
+        #endregion
+
+        #region Nested classes
+
+        private class CustomerAttributeModel
+        {
+            public CustomerAttributeModel()
+            {
+                Values = new List<CustomerAttributeValueModel>();
+            }
+
+            public int Id { get; set; }
+
+            public string Name { get; set; }
+
+            public bool IsRequired { get; set; }
+
+            /// <summary>
+            /// Default value for textboxes
+            /// </summary>
+            public string DefaultValue { get; set; }
+
+            public AttributeControlType AttributeControlType { get; set; }
+
+            public IList<CustomerAttributeValueModel> Values { get; set; }
+
+        }
+
+        private class CustomerAttributeValueModel
+        {
+            public int Id { get; set; }
+
+            public string Name { get; set; }
+
+            public bool IsPreSelected { get; set; }
         }
 
         #endregion

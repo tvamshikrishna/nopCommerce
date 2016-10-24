@@ -957,7 +957,8 @@ namespace Nop.Admin.Infrastructure.Mapper
                     .ForMember(dest => dest.DownloadableProductsValidateUser, mo => mo.Ignore())
                     .ForMember(dest => dest.OnlineCustomerMinutes, mo => mo.Ignore())
                     .ForMember(dest => dest.SuffixDeletedCustomers, mo => mo.Ignore())
-                    .ForMember(dest => dest.DeleteGuestTaskOlderThanMinutes, mo => mo.Ignore());
+                    .ForMember(dest => dest.DeleteGuestTaskOlderThanMinutes, mo => mo.Ignore())
+                    .ForMember(dest => dest.ExportCustomCustomerAttributes, mo => mo.Ignore());
                 cfg.CreateMap<AddressSettings, CustomerUserSettingsModel.AddressSettingsModel>()
                     .ForMember(dest => dest.CustomProperties, mo => mo.Ignore());
                 cfg.CreateMap<CustomerUserSettingsModel.AddressSettingsModel, AddressSettings>();

@@ -992,3 +992,12 @@ UPDATE [Setting]
 SET [Name] = N'catalogsettings.showskuonproductdetailspage' 
 WHERE [Name] = N'catalogsettings.showproductsku'
 GO
+
+ --new setting
+IF NOT EXISTS (SELECT 1 FROM [Setting] WHERE [name] = N'customersettings.exportcustomcustomerattributes')
+BEGIN
+	INSERT [Setting] ([Name], [Value], [StoreId])
+	VALUES (N'customersettings.exportcustomcustomerattributes', N'True', 0)
+END
+GO
+

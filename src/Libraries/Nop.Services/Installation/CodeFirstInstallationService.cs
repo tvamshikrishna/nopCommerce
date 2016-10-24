@@ -5896,7 +5896,8 @@ namespace Nop.Services.Installation
                 SuffixDeletedCustomers = false,
                 EnteringEmailTwice = false,
                 RequireRegistrationForDownloadableProducts = false,
-                DeleteGuestTaskOlderThanMinutes = 1440
+                DeleteGuestTaskOlderThanMinutes = 1440,
+                ExportCustomCustomerAttributes = true,
             });
 
             settingService.SaveSetting(new AddressSettings
