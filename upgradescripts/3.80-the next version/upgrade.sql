@@ -369,7 +369,7 @@ set @resources='
     <Value>Product availability range</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Catalog.Products.Fields.ProductAvailabilityRange.Hint">
-    <Value>Choose the product availability range that indicates when the product is back in stock (e.g. Available in 10-14 days). You can manage availability ranges by selecting Configuration > Shipping > Dates and ranges.</Value>
+    <Value>Choose the product availability range that indicates when the product is expected to be available when out of stock (e.g. Available in 10-14 days). You can manage availability ranges by selecting Configuration > Shipping > Dates and ranges.</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Catalog.Products.Fields.ProductAvailabilityRange.None">
     <Value>None</Value>
@@ -424,6 +424,9 @@ set @resources='
   </LocaleResource>
   <LocaleResource Name="Products.Availability.AvailabilityRange">
     <Value>Available in {0}</Value>
+  </LocaleResource>
+  <LocaleResource Name="Products.Availability.BackorderingWithDate">
+    <Value>Out of stock - on backorder and will be dispatched once in stock ({0}).</Value>
   </LocaleResource>
   <LocaleResource Name="ShoppingCart.AvailabilityRange">
     <Value>Available in {0}</Value>

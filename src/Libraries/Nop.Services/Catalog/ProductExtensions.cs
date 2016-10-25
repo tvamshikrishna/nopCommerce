@@ -124,10 +124,10 @@ namespace Nop.Services.Catalog
                         else
                         {
                             //out of stock
+                            var productAvailabilityRange = dateRangeService.GetProductAvailabilityRangeById(product.ProductAvailabilityRangeId);
                             switch (product.BackorderMode)
                             {
                                 case BackorderMode.NoBackorders:
-                                    var productAvailabilityRange = dateRangeService.GetProductAvailabilityRangeById(product.ProductAvailabilityRangeId);
                                     stockMessage = productAvailabilityRange == null ? localizationService.GetResource("Products.Availability.OutOfStock")
                                         : string.Format(localizationService.GetResource("Products.Availability.AvailabilityRange"),
                                             productAvailabilityRange.GetLocalized(range => range.Name));
@@ -136,7 +136,9 @@ namespace Nop.Services.Catalog
                                     stockMessage = localizationService.GetResource("Products.Availability.InStock");
                                     break;
                                 case BackorderMode.AllowQtyBelow0AndNotifyCustomer:
-                                    stockMessage = localizationService.GetResource("Products.Availability.Backordering");
+                                    stockMessage = productAvailabilityRange == null ? localizationService.GetResource("Products.Availability.Backordering")
+                                        : string.Format(localizationService.GetResource("Products.Availability.BackorderingWithDate"),
+                                            productAvailabilityRange.GetLocalized(range => range.Name));
                                     break;
                                 default:
                                     break;
