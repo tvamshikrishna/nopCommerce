@@ -240,6 +240,7 @@
     function toggleManageStock() {
         var selectedManageInventoryMethodId = $("#@Html.FieldIdFor(model => model.ManageInventoryMethodId)").val();
         if (selectedManageInventoryMethodId == @(((int) ManageInventoryMethod.DontManageStock).ToString())) {
+            $('#pnlProductAvailabilityRange').hide();
             $('#pnlUseMultipleWarehouses').hide();
         $('#pnlWarehouse').show();
         $('#pnlMultipleWarehouses').hide();
@@ -253,6 +254,7 @@
         $('#pnlBackorders').hide();
         $('#pnlAllowAddingOnlyExistingAttributeCombinations').hide();
     } else if (selectedManageInventoryMethodId == @(((int) ManageInventoryMethod.ManageStock).ToString())) {
+        $('#pnlProductAvailabilityRange').show();
         $('#pnlUseMultipleWarehouses').show();
 
         if ($('#@Html.FieldIdFor(model => model.UseMultipleWarehouses)').is(':checked')) {
@@ -286,6 +288,7 @@
     }
     $('#pnlAllowAddingOnlyExistingAttributeCombinations').hide();
     } else {
+        $('#pnlProductAvailabilityRange').show();
         $('#pnlUseMultipleWarehouses').hide();
         $('#pnlWarehouse').show();
         $('#pnlMultipleWarehouses').hide();
@@ -1486,6 +1489,15 @@
                             @Html.NopEditorFor(model => model.StockQuantity)
                             @Html.HiddenFor(model => model.LastStockQuantity)
                             @Html.ValidationMessageFor(model => model.StockQuantity)
+                        </div>
+                    </div>
+                    <div class="form-group @(Model.ProductEditorSettingsModel.ProductAvailabilityRange ? null : "advanced-setting")" id="pnlProductAvailabilityRange">
+                        <div class="@leftColumnClass">
+                            @Html.NopLabelFor(model => model.ProductAvailabilityRangeId)
+                        </div>
+                        <div class="@rightColumnClass">
+                            @Html.NopDropDownListFor(model => model.ProductAvailabilityRangeId, Model.AvailableProductAvailabilityRanges)
+                            @Html.ValidationMessageFor(model => model.ProductAvailabilityRangeId)
                         </div>
                     </div>
                     <div class="form-group @(Model.ProductEditorSettingsModel.Warehouse ? null : "advanced-setting")" id="pnlWarehouse">
