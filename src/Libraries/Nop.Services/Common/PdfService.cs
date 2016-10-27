@@ -346,7 +346,8 @@ namespace Nop.Services.Common
                 {
                     //payment method
                     var paymentMethod = _paymentService.LoadPaymentMethodBySystemName(order.PaymentMethodSystemName);
-                    string paymentMethodStr = paymentMethod != null ? paymentMethod.GetLocalizedFriendlyName(_localizationService, lang.Id) : order.PaymentMethodSystemName;
+                    string paymentMethodStr = paymentMethod != null ? paymentMethod.GetLocalizedPluginDetails(_localizationService,
+                        x => x.PluginDescriptor.FriendlyName, lang.Id) : order.PaymentMethodSystemName;
                     if (!String.IsNullOrEmpty(paymentMethodStr))
                     {
                         billingAddress.AddCell(new Paragraph(" "));

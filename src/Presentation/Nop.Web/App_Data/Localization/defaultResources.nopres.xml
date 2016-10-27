@@ -4701,6 +4701,12 @@
   <LocaleResource Name="Admin.Configuration.Plugins.Fields.Logo">
     <Value>Logo</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Plugins.Fields.PublicStoreDescription">
+    <Value>Public store description</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Plugins.Fields.PublicStoreDescription.Hint">
+    <Value>Plugin description to be displayed on checkout page.</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Plugins.Fields.SystemName">
     <Value>System name</Value>
   </LocaleResource>

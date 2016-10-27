@@ -452,6 +452,12 @@ set @resources='
   <LocaleResource Name="Admin.System.Warnings.URL.Reserved">
     <Value>Entered page name already exists, so it will be replaced by ''{0}''</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Plugins.Fields.PublicStoreDescription">
+    <Value>Public store description</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Plugins.Fields.PublicStoreDescription.Hint">
+    <Value>Plugin description to be displayed on checkout page.</Value>
+  </LocaleResource>
 </Language>
 '
 

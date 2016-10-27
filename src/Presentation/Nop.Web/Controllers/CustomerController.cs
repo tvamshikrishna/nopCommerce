@@ -440,7 +440,7 @@ namespace Nop.Web.Controllers
                     Id = ear.Id,
                     Email = ear.Email,
                     ExternalIdentifier = ear.ExternalIdentifier,
-                    AuthMethodName = authMethod.GetLocalizedFriendlyName(_localizationService, _workContext.WorkingLanguage.Id)
+                    AuthMethodName = authMethod.GetLocalizedPluginDetails(_localizationService, x => x.PluginDescriptor.FriendlyName, _workContext.WorkingLanguage.Id)
                 });
             }
 

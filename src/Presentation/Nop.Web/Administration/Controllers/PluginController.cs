@@ -50,7 +50,8 @@ namespace Nop.Admin.Controllers
         private readonly WidgetSettings _widgetSettings;
         private readonly ICustomerActivityService _customerActivityService;
         private readonly ICustomerService _customerService;
-        
+        private readonly IWorkContext _workContext;
+
         #endregion
 
         #region Ctor
@@ -69,7 +70,8 @@ namespace Nop.Admin.Controllers
             ExternalAuthenticationSettings externalAuthenticationSettings, 
             WidgetSettings widgetSettings,
             ICustomerActivityService customerActivityService,
-            ICustomerService customerService)
+            ICustomerService customerService,
+            IWorkContext workContext)
         {
             this._pluginFinder = pluginFinder;
             this._officialFeedManager = officialFeedManager;
@@ -86,6 +88,7 @@ namespace Nop.Admin.Controllers
             this._widgetSettings = widgetSettings;
             this._customerActivityService = customerActivityService;
             this._customerService = customerService;
+            _workContext = workContext;
         }
 
 		#endregion 
@@ -100,14 +103,21 @@ namespace Nop.Admin.Controllers
             //logo
             pluginModel.LogoUrl = pluginDescriptor.GetLogoUrl(_webHelper);
 
+            //default value of PublicStoreDescription
+            pluginModel.PublicStoreDescription = pluginDescriptor.Instance().GetLocalizedPluginDetails(_localizationService,
+                x => x.PluginDescriptor.PublicStoreDescription, _workContext.WorkingLanguage.Id, false);
             if (prepareLocales)
             {
                 //locales
                 AddLocales(_languageService, pluginModel.Locales, (locale, languageId) =>
                 {
-                    locale.FriendlyName = pluginDescriptor.Instance().GetLocalizedFriendlyName(_localizationService, languageId, false);
+                    locale.FriendlyName = pluginDescriptor.Instance().GetLocalizedPluginDetails(_localizationService,
+                        x => x.PluginDescriptor.FriendlyName, languageId, false);
+                    locale.PublicStoreDescription = pluginDescriptor.Instance().GetLocalizedPluginDetails(_localizationService,
+                        x => x.PluginDescriptor.PublicStoreDescription, languageId, false);
                 });
             }
+
             if (prepareStores)
             {
                 //stores
@@ -461,8 +471,15 @@ namespace Nop.Admin.Controllers
                 //locales
                 foreach (var localized in model.Locales)
                 {
-                    pluginDescriptor.Instance().SaveLocalizedFriendlyName(_localizationService, localized.LanguageId, localized.FriendlyName);
+                    pluginDescriptor.Instance().SaveLocalizedPluginDetails(_localizationService,
+                        x => x.PluginDescriptor.FriendlyName, localized.LanguageId, localized.FriendlyName);
+                    pluginDescriptor.Instance().SaveLocalizedPluginDetails(_localizationService,
+                        x => x.PluginDescriptor.PublicStoreDescription, localized.LanguageId, localized.PublicStoreDescription);
                 }
+                //save default localization of PublicStoreDescription because we don't store it on Description.txt
+                pluginDescriptor.Instance().SaveLocalizedPluginDetails(_localizationService,
+                    x => x.PluginDescriptor.PublicStoreDescription, _workContext.WorkingLanguage.Id, model.PublicStoreDescription);
+
                 //enabled/disabled
                 if (pluginDescriptor.Installed)
                 {

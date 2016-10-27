@@ -28,6 +28,15 @@
                             @Html.ValidationMessageFor(model => model.Locales[item].FriendlyName)
                         </div>
                     </div>
+                    <div class="form-group">
+                        <div class="col-md-3">
+                            @Html.NopLabelFor(model => model.Locales[item].PublicStoreDescription)
+                        </div>
+                        <div class="col-md-9">
+                            @Html.NopTextAreaFor(model => model.Locales[item].PublicStoreDescription)
+                            @Html.ValidationMessageFor(model => model.Locales[item].PublicStoreDescription)
+                        </div>
+                    </div>
                     @Html.HiddenFor(model => model.Locales[item].LanguageId)
                 </div>
     ,
@@ -39,6 +48,15 @@
                             <div class="col-md-9">
                                 @Html.NopEditorFor(model => model.FriendlyName)
                                 @Html.ValidationMessageFor(model => model.FriendlyName)
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-3">
+                                @Html.NopLabelFor(model => model.PublicStoreDescription)
+                            </div>
+                            <div class="col-md-9">
+                                @Html.NopTextAreaFor(model => model.PublicStoreDescription)
+                                @Html.ValidationMessageFor(model => model.PublicStoreDescription)
                             </div>
                         </div>
                     </div>

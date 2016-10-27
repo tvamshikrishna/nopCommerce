@@ -21,6 +21,7 @@ namespace Nop.Admin.Models.Plugins
             SelectedCustomerRoleIds = new List<int>();
             AvailableCustomerRoles = new List<SelectListItem>();
         }
+
         [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.Group")]
         [AllowHtml]
         public string Group { get; set; }
@@ -49,11 +50,16 @@ namespace Nop.Admin.Models.Plugins
 
         [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.Installed")]
         public bool Installed { get; set; }
-        
+
         [AllowHtml]
         public string Description { get; set; }
 
+        [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.PublicStoreDescription")]
+        [AllowHtml]
+        public string PublicStoreDescription { get; set; }
+
         public bool CanChangeEnabled { get; set; }
+
         [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.IsEnabled")]
         public bool IsEnabled { get; set; }
 
@@ -66,14 +72,17 @@ namespace Nop.Admin.Models.Plugins
         [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.AclCustomerRoles")]
         [UIHint("MultiSelect")]
         public IList<int> SelectedCustomerRoleIds { get; set; }
+
         public IList<SelectListItem> AvailableCustomerRoles { get; set; }
 
         //store mapping
         [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.LimitedToStores")]
         [UIHint("MultiSelect")]
         public IList<int> SelectedStoreIds { get; set; }
+
         public IList<SelectListItem> AvailableStores { get; set; }
     }
+
     public partial class PluginLocalizedModel : ILocalizedModelLocal
     {
         public int LanguageId { get; set; }
@@ -81,5 +90,9 @@ namespace Nop.Admin.Models.Plugins
         [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.FriendlyName")]
         [AllowHtml]
         public string FriendlyName { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Plugins.Fields.PublicStoreDescription")]
+        [AllowHtml]
+        public string PublicStoreDescription { get; set; }
     }
 }

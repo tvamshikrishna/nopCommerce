@@ -432,17 +432,17 @@ namespace Nop.Services.Localization
 
 
         /// <summary>
-        /// Get localized friendly name of a plugin
+        /// Get specified localized property of a plugin
         /// </summary>
         /// <typeparam name="T">Plugin</typeparam>
         /// <param name="plugin">Plugin</param>
         /// <param name="localizationService">Localization service</param>
+        /// <param name="keySelector">Key selector</param>
         /// <param name="languageId">Language identifier</param>
         /// <param name="returnDefaultValue">A value indicating whether to return default value (if localized is not found)</param>
         /// <returns>Localized value</returns>
-        public static string GetLocalizedFriendlyName<T>(this T plugin, ILocalizationService localizationService, 
-            int languageId, bool returnDefaultValue = true)
-            where T : IPlugin
+        public static string GetLocalizedPluginDetails<T>(this T plugin, ILocalizationService localizationService,
+            Expression<Func<T, string>> keySelector, int languageId, bool returnDefaultValue = true) where T : IPlugin
         {   
             if (localizationService == null)
                 throw new ArgumentNullException("localizationService");
@@ -453,30 +453,38 @@ namespace Nop.Services.Localization
             if (plugin.PluginDescriptor == null)
                 throw new ArgumentException("Plugin descriptor cannot be loaded");
 
-            string systemName = plugin.PluginDescriptor.SystemName;
+            var member = keySelector.Body as MemberExpression;
+            if (member == null)
+                throw new ArgumentException(string.Format("Expression '{0}' refers to a method, not a property.", keySelector));
+
+            var propInfo = member.Member as PropertyInfo;
+            if (propInfo == null)
+                throw new ArgumentException(string.Format("Expression '{0}' refers to a field, not a property.", keySelector));
+
             //localized value
-            string resourceName = string.Format("Plugins.FriendlyName.{0}",
-                systemName);
-            string result = localizationService.GetResource(resourceName, languageId, false, "", true);
+            var resourceName = string.Format("Plugins.{0}.{1}", propInfo.Name, plugin.PluginDescriptor.SystemName);
+            var result = localizationService.GetResource(resourceName, languageId, false, returnEmptyIfNotFound: true);
 
             //set default value if required
-            if (String.IsNullOrEmpty(result) && returnDefaultValue)
-                result = plugin.PluginDescriptor.FriendlyName;
+            if (string.IsNullOrEmpty(result) && returnDefaultValue)
+            {
+                var localizer = keySelector.Compile();
+                result = localizer(plugin);
+            }
 
             return result;
         }
         /// <summary>
-        /// Save localized friendly name of a plugin
+        /// Save specified localized property of a plugin
         /// </summary>
         /// <typeparam name="T">Plugin</typeparam>
         /// <param name="plugin">Plugin</param>
         /// <param name="localizationService">Localization service</param>
+        /// <param name="keySelector">Key selector</param>
         /// <param name="languageId">Language identifier</param>
         /// <param name="localizedFriendlyName">Localized friendly name</param>
-        public static void SaveLocalizedFriendlyName<T>(this T plugin, 
-            ILocalizationService localizationService, int languageId,
-            string localizedFriendlyName)
-            where T : IPlugin
+        public static void SaveLocalizedPluginDetails<T>(this T plugin, ILocalizationService localizationService,
+            Expression<Func<T, string>> keySelector, int languageId, string localizedFriendlyName) where T : IPlugin
         {
             if (localizationService == null)
                 throw new ArgumentNullException("localizationService");
@@ -490,21 +498,24 @@ namespace Nop.Services.Localization
             if (plugin.PluginDescriptor == null)
                 throw new ArgumentException("Plugin descriptor cannot be loaded");
 
-            string systemName = plugin.PluginDescriptor.SystemName;
+            var member = keySelector.Body as MemberExpression;
+            if (member == null)
+                throw new ArgumentException(string.Format("Expression '{0}' refers to a method, not a property.", keySelector));
+
+            var propInfo = member.Member as PropertyInfo;
+            if (propInfo == null)
+                throw new ArgumentException(string.Format("Expression '{0}' refers to a field, not a property.", keySelector));
+
             //localized value
-            string resourceName = string.Format("Plugins.FriendlyName.{0}", systemName);
+            var resourceName = string.Format("Plugins.{0}.{1}", propInfo.Name, plugin.PluginDescriptor.SystemName);
             var resource = localizationService.GetLocaleStringResourceByName(resourceName, languageId, false);
 
             if (resource != null)
             {
                 if (string.IsNullOrWhiteSpace(localizedFriendlyName))
-                {
-                    //delete
                     localizationService.DeleteLocaleStringResource(resource);
-                }
                 else
                 {
-                    //update
                     resource.ResourceValue = localizedFriendlyName;
                     localizationService.UpdateLocaleStringResource(resource);
                 }
@@ -512,16 +523,12 @@ namespace Nop.Services.Localization
             else
             {
                 if (!string.IsNullOrWhiteSpace(localizedFriendlyName))
-                {
-                    //insert
-                    resource = new LocaleStringResource
+                    localizationService.InsertLocaleStringResource(new LocaleStringResource
                     {
                         LanguageId = languageId,
                         ResourceName = resourceName,
                         ResourceValue = localizedFriendlyName,
-                    };
-                    localizationService.InsertLocaleStringResource(resource);
-                }
+                    });
             }
         }
     }

@@ -661,7 +661,8 @@ namespace Nop.Web.Controllers
                 var selectedPaymentMethodSystemName = _workContext.CurrentCustomer.GetAttribute<string>(
                     SystemCustomerAttributeNames.SelectedPaymentMethod, _storeContext.CurrentStore.Id);
                 var paymentMethod = _paymentService.LoadPaymentMethodBySystemName(selectedPaymentMethodSystemName);
-                model.OrderReviewData.PaymentMethod = paymentMethod != null ? paymentMethod.GetLocalizedFriendlyName(_localizationService, _workContext.WorkingLanguage.Id) : "";
+                model.OrderReviewData.PaymentMethod = paymentMethod != null ? paymentMethod.GetLocalizedPluginDetails(_localizationService,
+                    x => x.PluginDescriptor.FriendlyName, _workContext.WorkingLanguage.Id) : "";
 
                 //custom values
                 var processPaymentRequest = _httpContext.Session["OrderPaymentInfo"] as ProcessPaymentRequest;

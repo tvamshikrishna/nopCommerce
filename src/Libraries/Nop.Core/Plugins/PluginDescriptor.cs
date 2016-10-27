@@ -80,6 +80,11 @@ namespace Nop.Core.Plugins
         public virtual string Description { get; set; }
 
         /// <summary>
+        /// Gets or sets the public store description
+        /// </summary>
+        public virtual string PublicStoreDescription { get; set; }
+
+        /// <summary>
         /// Gets or sets the display order
         /// </summary>
         public virtual int DisplayOrder { get; set; }
