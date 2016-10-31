@@ -2744,10 +2744,6 @@ namespace Nop.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            //a vendor cannot import products
-            if (_workContext.CurrentVendor != null)
-                return AccessDeniedView();
-
             try
             {
                 var file = Request.Files["importexcelfile"];

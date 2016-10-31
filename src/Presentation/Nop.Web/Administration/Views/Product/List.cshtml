@@ -65,14 +65,12 @@
                     </li>
                 </ul>
             </div>
-            @if (!Model.IsLoggedInAsVendor)
-            {
-                //a vendor cannot import products
-                <button type="button" name="importexcel" class="btn bg-olive" data-toggle="modal" data-target="#importexcel-window">
-                    <i class="fa fa-upload"></i>
-                    @T("Admin.Common.Import")
-                </button>
-            }
+
+            <button type="button" name="importexcel" class="btn bg-olive" data-toggle="modal" data-target="#importexcel-window">
+                <i class="fa fa-upload"></i>
+                @T("Admin.Common.Import")
+            </button>
+           
             <button type="button" id="delete-selected" class="btn bg-red">
                 <i class="fa fa-trash-o"></i>
                 @T("Admin.Common.Delete.Selected")
